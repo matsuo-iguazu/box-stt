@@ -138,7 +138,7 @@ sequenceDiagram
      ```bash
      ibmcloud ce secret create --name app-secret --from-env-file .env
      ```
-
+　
 ### STEP 7: CodeEngine への展開
 
 1. **Secret (機密情報) の作成**:
