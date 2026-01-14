@@ -120,11 +120,28 @@ sequenceDiagram
    docker push [CRドメイン]/[名前空間名]/stt-box-wxo:latest
    ```
 
-### STEP 6: CodeEngine への展開
+### STEP 6: シークレットの設定
+対象の Code Engine プロジェクト画面の左メニューから「シークレットおよびConfigMap」を選択し、以下の2種類のシークレットを作成します。
+1. **レジストリー・シークレットの作成**:Code Engine が Container Registry からイメージをプルするために必要です。
+   * 「作成」＞「レジストリー・シークレット」を選択。
+   * **シークレット名**: 任意の名前（例: icr-secret）
+   * **ターゲット**: IBM Container Registry
+   * **ロケーション**: 使用しているCRのリージョン（例: jp.icr.io）
+   * IAM API キー: 作成済みの IBM Cloud API Key を入力。
+       * 未取得の場合は「管理」＞「アクセス(IAM)」＞「API キー」から作成。
+2.  **一般シークレットの作成**:アプリケーション（.env）で使用する全ての機密情報を一括管理します。
+   * 「作成」＞「レジストリー・シークレット」を選択。
+   * **シークレット名**: 任意の名前（例: app-secret）
+   * **キーと値のペア**: .env ファイルに記載されている内容をすべて「キー」と「値」の形式で入力します。
+      * STT_API_KEY / BOX_CLIENT_SECRET / BOX_DEVELOPER_TOKEN など、すべての項目をここに追加してください。
+   * **（参考）CLI で作成可能な場合** ibmcloud CLIでプロジェクトが選択済み `ibmcloud ce project select --name <PROJECT_NAME>`であれば.envファイルから一括取り込みが可能
+     ```bash
+     ibmcloud ce secret create --name app-secret --from-env-file .env
+     ```
 
-1. **レジストリー・アクセスの作成**:
-* CodeEngine プロジェクト内「プロジェクトの詳細」>「レジストリー・アクセス」から、Container Registry の名前空間にアクセスするためのシークレット（例: `icr-secret`）を作成します。
-2. **Secret (機密情報) の作成**:
+### STEP 7: CodeEngine への展開
+
+1. **Secret (機密情報) の作成**:
 * 「機密情報と構成マップ」 > 「作成」 > 「秘密」を選択。
 * 名前を `stt-secrets` とし、`.env` の全内容を Key-Value 形式で登録します。
 3. **Receiver (App) の作成**:
@@ -140,7 +157,7 @@ sequenceDiagram
 * **コマンドの上書き**: 実行コマンドを `python`、引数を `ce_worker.py` に指定。
 * **環境変数**: `stt-secrets` をすべて参照設定します。
 
-### STEP 7: Webhook V2 の紐付け
+### STEP 8: Webhook V2 の紐付け
 
 1. Box 開発者コンソール > Webhook > Webhookの作成。
 * **対象**: `speech` フォルダを選択。
