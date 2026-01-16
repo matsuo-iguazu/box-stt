@@ -8,6 +8,10 @@ Boxにアップロードされた音声ファイルを、IBM Cloud CodeEngine �
 
 ## 2. システムアーキテクチャ
 
+### 2-1. アーキテクチャー図
+[アーキテクチャー図](images/box-stt.png)
+
+### 2-2. シーケンス図
 ```mermaid
 sequenceDiagram
     participant B as Box Folder (speech)
