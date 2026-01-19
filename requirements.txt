@@ -1,0 +1,6 @@
+flask
+python-dotenv
+ibm-watson
+ibm-cloud-sdk-core
+ibm-code-engine-sdk
+box-sdk-gen[jwt]

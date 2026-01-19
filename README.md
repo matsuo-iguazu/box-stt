@@ -51,7 +51,7 @@ sequenceDiagram
 3. **IBM Cloud Container Registry**: 名前空間（Namespace）が作成済みであること。
 4. **Box アカウント**: 開発者コンソールおよび管理コンソールへのアクセス権限があること。
 5. **ローカル環境**:
-   * **Docker**: イメージのビルドに必要です。インストールは[Docker Desktop](https://www.docker.com/products/docker-desktop/)などを参照してください。
+   * **Docker CLI**: イメージのビルドに必要です。
    * **IBM Cloud CLI**: インストールは[公式ガイド](https://cloud.ibm.com/docs/cli?topic=cli-install-ibmcloud-cli)を参照してください。
 
 ## 4. 詳細構築手順
@@ -61,13 +61,19 @@ sequenceDiagram
 1. 本リポジトリをクローンします。
 2. `env.sample` をコピーして `.env` ファイルを作成します。以降の手順で取得する値は、この `.env` の該当項目に順次貼り付けてください。
 
-### STEP 2: Watson STT 資格情報の取得
+### STEP 2: IBM CLoud API key (IAM) の取得
+
+1. IBM Cloud のAPIキーを取得済みの場合はそれを利用します。TechZone環境で提供済みの場合はそれを確認します。
+2. 取得できていない場合は、IBM Cloud コンソールの「管理」>「アクセス（IAM)」、左側メニュー「APIキー」よりAPIキーを作成します。
+3. `.env` の `IBM_CLOUD_API_KEY` に貼り付けます。
+
+### STEP 3: Watson STT 資格情報の取得
 
 1. IBM Cloud コンソールで Watson Speech to Text インスタンスを開きます。
 2. 左メニュー「管理」から **API キー** をコピーし、`.env` の `STT_API_KEY` に貼り付けます。
 3. 同画面の **URL** をコピーし、`.env` の `STT_SERVICE_URL` に貼り付けます。
 
-### STEP 3: Box フォルダの作成と権限設定
+### STEP 4: Box フォルダの作成と権限設定
 
 1. Box ユーザー画面で、本システム用の親フォルダ（例: `box-stt-root`）を作成します。
 2. 親フォルダの中に、以下の 3 つの子フォルダを作成します。
@@ -76,11 +82,11 @@ sequenceDiagram
    * `done`（処理済み移動用）
 3. 各フォルダを開き、ブラウザの URL 末尾にある数字（フォルダ ID:../folder/nnnnnnnnnnnn）をコピーして、`.env` の `BOX_SPEECH_FOLDER_ID`, `BOX_TEXT_FOLDER_ID`, `BOX_DONE_FOLDER_ID` にそれぞれ貼り付けます。
 
-### STEP 4: Box Platform アプリケーションの定義
+### STEP 5: Box Platform アプリケーションの定義
 
-1. **アプリ作成**: [Box開発者コンソール](https://app.box.com/developers/console)で「Platformアプリの作成」を選択。
+1. **アプリ作成**: [Box開発者コンソール](https://app.box.com/developers/console)の「Platformアプリ」画面で「新規アプリ＋」を選択。
    * **アプリ名**: 任意のアプリケーション名（例: `box-stt`）
-   * **認証方法**: アプリの種類で「クライアント資格情報許可 (Client Credentials Grant)」を選択。
+   * **アプリタイプ**: 「クライアント資格情報許可」を選択。
 2. **基本情報取得**: 「構成」タブで以下を確認します。
    * **クライアント ID**: コピーし、`.env` の `BOX_CLIENT_ID` へ貼り付けます。
    * **クライアントシークレット**: 「クライアントシークレットを取得」で得られた文字列をコピーし、`.env` の `BOX_CLIENT_SECRET` へ貼り付けます。
@@ -91,18 +97,18 @@ sequenceDiagram
    * **Enterprise ID**: 画面下部から確認し、`.env` の `BOX_ENTERPRISE_ID` へ貼り付けます。
 5. **承認依頼**: 「承認」タブで以下を確認します。
    * **「確認して承認」**: ボタンを押し管理者に承認依頼する。
+6. **アプリの承認**:
+   * [Box 管理コンソール](https://app.box.com/master) > 統合 > Platformアプリマネージャ > サーバー認証アプリのりすとから対象のアプリの3点リーダ「...」から「アプリの（再）承認」を選び本アプリを承認します。
 7. **親フォルダへの招待**:
-   * アプリの「一般設定」タブにある **「サービスアカウント情報」** の **Service Account ID**（自動生成されたメールアドレス形式のもの）をコピーします。
-   * Box ユーザー画面に戻り、STEP 3 で作成した **親フォルダ** の **「共有」** ポップアップの **ユーザーを招待** に、このサービスアカウントを「編集者」として招待します。
-8. **アプリの承認**:
-   * Box 管理コンソール > 統合 > Platformアプリマネージャ > サーバー認証アプリの「・・・」から「アプリの（再）承認」を選び本アプリを承認します。
+   * 開発者コンソールに戻り、対象アプリの「一般設定」タブにある **「サービスアカウント情報」** の **Service Account ID**（自動生成されたメールアドレス形式のもの）をコピーします。
+   * Box ユーザー（フォルダ）画面に戻り、STEP 3 で作成した **親フォルダ** の **「共有」** ポップアップの **ユーザーを招待** に、このサービスアカウントを「編集者として招待」で「送信」します。
 
-### STEP 5: コンテナイメージのビルドとプッシュ
+### STEP 6: コンテナイメージのビルドとプッシュ
 
 1. **CLIへのログイン**:
    * IBM Cloud コンソール右上のアバターをクリックし、「CLI と API にログイン」を選択する。
    * 表示されたログインコマンドをコピーし、ターミナルで実行する。
-   * リージョンの選択にて、IBM Cloud Container Registryが稼働するリージョンを選択する。
+   * 「Select a region（リージョンの選択）」にて、IBM Cloud Container Registryが稼働するリージョンを選択する。
 2. **プラグインの確認**:
    Container Registry 操作用のプラグインが未導入の場合は、下記コマンドでインストールしてください。
    ```bash
@@ -112,93 +118,94 @@ sequenceDiagram
    ```bash
    # 既存の名前空間の確認
    ibmcloud cr namespaces
-   # 名前空間の作成（未作成の場合のみ）
-   ibmcloud cr namespace-add <名前空間名>
    ```
+   名前空間が存在しない場合はIBM Cloud コンソールか、以下のコマンドにて作成します。
+   `ibmcloud cr namespace-add <名前空間名>`
+   
 4. `Dockerfile` を使用してイメージをビルドします。
    * Container Registryのドメインと名前空間を使用して`docker`コマンドを実行する。
    * CRドメイン: jp-tokの場合 `jp.icr.io`、en-southの場合 `icr.io` を使用する。
    ```bash
    ibmcloud cr login
-   docker build -t [CRドメイン]/[名前空間名]/stt-box-wxo:latest .
-   docker push [CRドメイン]/[名前空間名]/stt-box-wxo:latest
+   docker build -t [CRドメイン]/[名前空間名]/box-stt:latest .
+   docker push [CRドメイン]/[名前空間名]/box-stt:latest
    ```
 
-### STEP 6: シークレットの設定
+### STEP 7: シークレットの設定
 対象の Code Engine プロジェクト画面の左メニューから「シークレットおよびConfigMap」を選択し、以下の2種類のシークレットを作成します。
 1. **レジストリー・シークレットの作成**:Code Engine が Container Registry からイメージをプルするために必要です。
    * 「作成」＞「レジストリー・シークレット」を選択。
-   * **シークレット名**: 任意の名前（例: icr-secret）
+   * **シークレット名**: 任意の名前（例: jp-icr-secret）
    * **ターゲット**: IBM Container Registry
-   * **ロケーション**: 使用しているCRのリージョン（例: jp.icr.io）
+   * **ロケーション**: 使用しているCRのリージョン（例: 東京(private.jp.icr.io)）
    * IAM API キー: 作成済みの IBM Cloud API Key を入力。
        * 未取得の場合は「管理」＞「アクセス(IAM)」＞「API キー」から作成。
 2.  **一般シークレットの作成**:アプリケーション（.env）で使用する全ての機密情報を一括管理します。
-   * 「作成」＞「レジストリー・シークレット」を選択。
-   * **シークレット名**: 任意の名前（例: app-secret）
+   * 「作成」＞「一般シークレット」を選択。
+   * **シークレット名**: 任意の名前（例: app-job-secret）
    * **キーと値のペア**: .env ファイルに記載されている内容をすべて「キー」と「値」の形式で入力します。
-      * STT_API_KEY / BOX_CLIENT_SECRET / BOX_DEVELOPER_TOKEN など、すべての項目をここに追加してください。
-   * **（参考）CLI で作成可能な場合** ibmcloud CLIでプロジェクトが選択済み `ibmcloud ce project select --name <PROJECT_NAME>`であれば.envファイルから一括取り込みが可能
+      * STT_API_KEY / STT_MODEL / BOX_CLIENT_SECRET など、すべての項目をここに追加してください。
+   * **（参考）CLI で作成可能な場合** `ibmcloud ce project list`でプロジェクトが選択済みであれば.envファイルから一括取り込みが可能
      ```bash
-     ibmcloud ce secret create --name app-secret --from-env-file .env
+       ``` ibmcloud ce secret create --name app-secret --from-env-file .env
      ```
 　
-### STEP 7: CodeEngine への展開
+### STEP 8: CodeEngine への展開
 対象の Code Engine プロジェクト画面から、以下のアプリケーションとジョブを作成します。
 1. **Receiver (App) の作成**:
 * 「アプリケーション」 > 「作成」。
-* **名前**: stt-receiver-app
+* **名前**: `stt-receiver-app`
 * **コード**:
     *  「既存のコンテナイ・メージを使用」
     *  「イメージの構成」にて、以下を指定。
         *  **レジストリー・サーバー**: `private.jp.icr.io`
-        *  **レジストリー・シークレット**: STEP6で作成したレジストリーシークレット（例：icr-secret）
+        *  **レジストリー・シークレット**: STEP6で作成したレジストリーシークレット（例：jp-icr-secret）
         *  **名前空間**:[名前空間名]
-        *  **リポジトリ―**: STEPでpushしたリポジトリ（例stt-box-wxo）
-        *  **タグ**: STEPでpushしたタグ（例latest）
+        *  **リポジトリ―**: STEPでpushしたリポジトリ（例：box-stt）
+        *  **タグ**: STEPでpushしたタグ（例：latest）
         *  「Done」ボタン
     * 「作成」ボタンを押す
-* **<アプリケーション名>ページ**:
+* **stt-receiver-appページ**:
     *  「構成」タブ - 「イメージ始動オプション」セクション
-        * **ポート**: `8080` (デフォルト)。
+        * **リスニングポート**: `8080` (デフォルト)。
         * **コマンド/引数**: ブランク（DockerfileのCMDを使用）。
     *  「構成」タブ - 「環境変数」セクション
-        * 「環境変数の追加」で「シークレット全体の参照」を選択、「シークレット」で上記で作成のシークレット（例：abc）を選択し、「追加」  
+        * 「環境変数の追加」で「シークレット全体の参照」を選択、「シークレット」で上記で作成のシークレット（例：app-job-secret）を選択し、「追加」  
     * **デプロイ**: 青色の帯に「デプロイ」が表示されるので、デプロイする。
     * 「ドメイン・マッピング」タブ - 「システム・ドメイン・マッピング」セクションの「パブリック」のURLを控える。
 2. **Worker (Job) の作成**:
 * 「ジョブ」-「ジョブ」 > 「作成」。
-* **名前**: stt-worker-app
+* **名前**: `stt-worker-job` (* receiverアプリで定義している名前なので正確に) 
 * **コード**:
     *  「既存のコンテナイ・メージを使用」
     *  「イメージの構成」にて、以下を指定。
         *  **レジストリー・サーバー**: `private.jp.icr.io`
-        *  **レジストリー・シークレット**: STEP6で作成したレジストリーシークレット（例：icr-secret）
+        *  **レジストリー・シークレット**: STEP6で作成したレジストリーシークレット（例：jp-icr-secret）
         *  **名前空間**:[名前空間名]
-        *  **リポジトリ―**: STEPでpushしたリポジトリ（例stt-box-wxo）
-        *  **タグ**: STEPでpushしたタグ（例latest）
+        *  **リポジトリ―**: STEPでpushしたリポジトリ（例：box-stt）
+        *  **タグ**: STEPでpushしたタグ（例：latest）
         *  「Done」ボタン
     * 「作成」ボタンを押す
-* **<ジョブ名>ページ**:
+* **stt-worker-jobページ**:
     *  「構成」タブ - 「イメージ始動オプション」セクション
         * **コマンド/引数**: `python`
         * **引数**: ブランク（Dockerfileのパラメータを使用）。
     *  「構成」タブ - 「環境変数」セクション
-        * 「環境変数の追加」で「シークレット全体の参照」を選択、「シークレット」で上記で作成のシークレット（例：abc）を選択し、「追加」  
+        * 「環境変数の追加」で「シークレット全体の参照」を選択、「シークレット」で上記で作成のシークレット（例：app-job-secret）を選択し、「追加」  
     * **デプロイ**: 青色の帯に「デプロイ」が表示されるので、デプロイする。
 　
-### STEP 8: Webhook V2 の紐付け
+### STEP 9: Webhook V2 の紐付け
 
 1. **Box 開発者コンソール**: - Platformアプリ画面で対象のアプリを選択
-* **Webhook**: Webhookの作成 > V2
-* **構成**: STEP7で控えたアプリのURLを貼りつけ
+* **Webhookタブ**: Webhookの作成 > V2
+* **構成-URLアドレス**: STEP7で控えたアプリのURLを貼りつけ
 * **コンテンツタイプ-**: 以下を選択
-    * フォルダ（例: `box-stt-root`）を選択
+    * フォルダ `speech`（例: `box-stt-root`配下）を選択
     * File Trigger - `File Uploaded` を選択  
 * 「Webhookを作成」
-* **承認**:「確認して承認」
+* **承認タブ**:「確認して送信」（承認依頼を再度送信する）
 2. **アプリの承認**:
-   * Box 管理コンソール > 統合 > Platformアプリマネージャ > サーバー認証アプリの「・・・」から「アプリの（再）承認」を選び本アプリを承認します。
+   * Box 管理コンソール > 統合 > Platformアプリマネージャ > サーバー認証アプリ　`box-stt` 3点リーダ「...」から「アプリの再承認」を選び本アプリを承認します。
 
 ## 5. (オプション) ローカルでの開発・デバッグ
 ローカル環境でスクリプトを直接実行してテストを行う場合は、以下の手順で環境を構築してください。

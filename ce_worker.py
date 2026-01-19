@@ -52,36 +52,14 @@ def main():
 
         # 2. Watsonジョブ作成
         ce_log("WORKER", "2.ジョブ作成", file_name)
-    
-        # 拡張子の判定とContent-Typeの決定
-        ext = os.path.splitext(file_name)[1].lower()
-        if ext == '.mp3':
-            content_type = 'audio/mp3'
-        elif ext == '.wav':
-            content_type = 'audio/wav'
-        else:
-            # 対応外の拡張子
-            ce_log("WORKER", "!!! mp3, wav 以外のファイル", f"{file_name}")
-            return  # ここで処理を中断
-    
-        # 環境変数からモデル名を取得 (デフォルトは ja-JP)
-        # ユーザー指定の "ja-JP" をベースにする場合は第2引数を調整してください
-        stt_model = os.environ.get('STT_MODEL', 'ja-JP')
-    
-        # ジョブの作成
-        try:
-            job = stt.create_job(
-                audio=audio_data,
-                content_type=content_type,
-                model=stt_model,
-                results_ttl=1440
-            ).get_result()
-    
-            job_id = job['id']
-            ce_log("WORKER", "3.ジョブ監視中", f"Job ID: {job_id} | Model: {stt_model}")
-        except Exception as e:
-            ce_log("WORKER", "!!! Watsonジョブ作成失敗", str(e))
-            return
+        job = stt.create_job(
+            audio_data, content_type='audio/mp3',
+            model='ja-JP', results_ttl=120
+        ).get_result()
+        
+        job_id = job['id']
+        ce_log("WORKER", "3.ジョブ監視中", job_id)
+
 
         # 3. ポーリング
         while True:
