@@ -198,7 +198,8 @@ sequenceDiagram
 
 1. **Box 開発者コンソール**: - Platformアプリ画面で対象のアプリを選択
 * **Webhookタブ**: Webhookの作成 > V2
-* **構成-URLアドレス**: STEP7で控えたアプリのURLを貼りつけ
+* **構成-URLアドレス**: STEP7で控えたアプリのURLの末尾に `/webhook` を追加して貼りつけ
+（例：`https://stt-receiver-app.xxxxxxxxxxxx.us-south.codeengine.appdomain.cloud/webhook`）
 * **コンテンツタイプ-**: 以下を選択
     * フォルダ `speech`（例: `box-stt-root`配下）を選択
     * File Trigger - `File Uploaded` を選択  
@@ -207,20 +208,7 @@ sequenceDiagram
 2. **アプリの承認**:
    * Box 管理コンソール > 統合 > Platformアプリマネージャ > サーバー認証アプリ　`box-stt` 3点リーダ「...」から「アプリの再承認」を選び本アプリを承認します。
 
-## 5. (オプション) ローカルでの開発・デバッグ
-ローカル環境でスクリプトを直接実行してテストを行う場合は、以下の手順で環境を構築してください。
-1. **仮想環境の作成**:
-```bash
-python -m venv venv
-source venv/bin/activate  # Windowsの場合は venv\Scripts\activate
-```
-2. **ライブラリのインストール**:
-```bash
-pip install -r requirements.txt
-```   
-3. **実行**:`.env` がカレントディレクトリにある状態で実行します。
-
-## 6. リポジトリ構成
+## 5. リポジトリ構成
 
 * `ce_receiver.py`: Webhook受信、Jobキック。
 * `ce_worker.py`: 音声解析、Box操作。
