@@ -1,6 +1,6 @@
-# stt-box 構築ガイド
+# Box音声ファイル自動書き起こしアプリ（box-stt） のご紹介とリポジトリ利用ガイド
 
-Boxにアップロードされた音声ファイルを、IBM Cloud CodeEngine と Watson Speech to Text (STT) を利用して自動でテキスト化するサーバーレス・パイプラインの構築手順です。
+Boxにアップロードされた音声ファイルを、IBM Cloud CodeEngine と Watson Speech to Text (STT) を利用して自動でテキスト化するサーバーレス・パイプラインの解説と当リポジトリを活用した構築手順です。
 
 ## 1. 概要
 
@@ -167,10 +167,10 @@ sequenceDiagram
     *  「既存のコンテナイ・メージを使用」
     *  「イメージの構成」にて、以下を指定。
         *  **レジストリー・サーバー**: `private.jp.icr.io`
-        *  **レジストリー・シークレット**: STEP6で作成したレジストリーシークレット（例：jp-icr-secret）
+        *  **レジストリー・シークレット**: STEP 7で作成したレジストリーシークレット（例：jp-icr-secret）
         *  **名前空間**:[名前空間名]
-        *  **リポジトリ―**: STEPでpushしたリポジトリ（例：box-stt）
-        *  **タグ**: STEPでpushしたタグ（例：latest）
+        *  **リポジトリ―**: STEP 6でpushしたリポジトリ（例：box-stt）
+        *  **タグ**: STEP 6でpushしたタグ（例：latest）
         *  「Done」ボタン
     * 「作成」ボタンを押す
     * （参考）インスタンス・リソースは `1個の vCPU / 4GB` で稼働確認しています。
@@ -189,9 +189,9 @@ sequenceDiagram
     *  「既存のコンテナイ・メージを使用」
     *  「イメージの構成」にて、以下を指定。
         *  **レジストリー・サーバー**: `private.jp.icr.io`
-        *  **レジストリー・シークレット**: STEP6で作成したレジストリーシークレット（例：jp-icr-secret）
+        *  **レジストリー・シークレット**: STEP 7で作成したレジストリーシークレット（例：jp-icr-secret）
         *  **名前空間**:[名前空間名]
-        *  **リポジトリ―**: STEPでpushしたリポジトリ（例：box-stt）
+        *  **リポジトリ―**: STEP 6でpushしたリポジトリ（例：box-stt）
         *  **タグ**: STEPでpushしたタグ（例：latest）
         *  「Done」ボタン
     * 「作成」ボタンを押す
@@ -228,6 +228,8 @@ sequenceDiagram
 3. **stt-worker-job起動** Code Engineのジョブ `stt-worker-job` の概要ページなどでジョブの自動起動を確認します。
 
 4. **処理結果確認** `stt-worker-job` の処理が終了したことを確認後、Boxのフォルダ `text`に書き起こしファイルが作成されていること、フォルダ `speech` に置いたファイルが `done` フォルダに移動していることを確認します。
+
+(参考)環境変数 `STT_MODEL` でWatson Speech to Textの書き起こしモデルの指定を変更できます。
 
 ![稼働中スクリーンイメージ](images/working_sc.png)
 
