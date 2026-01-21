@@ -42,6 +42,14 @@ sequenceDiagram
     Note right of J: ジョブ終了 (インスタンス消滅)
 ```
 
+### 2-3. リポジトリ構成
+
+* `ce_receiver.py`: Webhook受信、Job（`ce_worker.py`）キック。
+* `ce_worker.py`: 音声テキスト書き起こし、Box操作。
+* `ce_utils.py`: ログ基盤。
+* `Dockerfile`: 共通実行環境。
+* `env.sample`: 環境変数のテンプレート。
+
 ## 3. 作業の前提条件
 
 本手順を開始する前に、以下のリソースがプロビジョニング済みであることを確認してください。
@@ -146,9 +154,9 @@ sequenceDiagram
    * **キーと値のペア**: .env ファイルに記載されている内容をすべて「キー」と「値」の形式で入力します。
       * STT_API_KEY / STT_MODEL / BOX_CLIENT_SECRET など、すべての項目をここに追加してください。
    * **（参考）CLI で作成可能な場合** `ibmcloud ce project list`でプロジェクトが選択済みであれば.envファイルから一括取り込みが可能
-     ```bash
-       ``` ibmcloud ce secret create --name app-secret --from-env-file .env
-     ```
+      ```bash
+      ibmcloud ce secret create --name app-secret --from-env-file .env
+      ```
 　
 ### STEP 8: CodeEngine への展開
 対象の Code Engine プロジェクト画面から、以下のアプリケーションとジョブを作成します。
@@ -165,6 +173,7 @@ sequenceDiagram
         *  **タグ**: STEPでpushしたタグ（例：latest）
         *  「Done」ボタン
     * 「作成」ボタンを押す
+    * （参考）インスタンス・リソースは `1個の vCPU / 4GB` で稼働確認しています。
 * **stt-receiver-appページ**:
     *  「構成」タブ - 「イメージ始動オプション」セクション
         * **リスニングポート**: `8080` (デフォルト)。
@@ -186,6 +195,7 @@ sequenceDiagram
         *  **タグ**: STEPでpushしたタグ（例：latest）
         *  「Done」ボタン
     * 「作成」ボタンを押す
+    * （参考）インスタンス・リソースは `1個の vCPU / 4GB` で稼働確認しています。
 * **stt-worker-jobページ**:
     *  「構成」タブ - 「イメージ始動オプション」セクション
         * **コマンド/引数**: `python`
@@ -208,10 +218,56 @@ sequenceDiagram
 2. **アプリの承認**:
    * Box 管理コンソール > 統合 > Platformアプリマネージャ > サーバー認証アプリ　`box-stt` 3点リーダ「...」から「アプリの再承認」を選び本アプリを承認します。
 
-## 5. リポジトリ構成
+## 5. 稼働確認
+設定完了後の稼働確認例をご紹介します。
 
-* `ce_receiver.py`: Webhook受信、Jobキック。
-* `ce_worker.py`: 音声解析、Box操作。
-* `ce_utils.py`: ログ基盤。
-* `Dockerfile`: 共通実行環境。
-* `env.sample`: 環境変数のテンプレート。
+1. **音声ファイルアップロード** 音声ファイル（当アプリでは.mp3, .wavをサポート）をBoxの `speech` フォルダにアップロードします。Boxの他フォルダからのファイル移動でも動作します。
+
+2. **stt-receiver-app起動** Code Engineのアプリ `stt-receiver-app` の概要ページなどでアプリの自動起動を確認します。
+
+3. **stt-worker-job起動** Code Engineのジョブ `stt-worker-job` の概要ページなどでジョブの自動起動を確認します。
+
+4. **処理結果確認** `stt-worker-job` の処理が終了したことを確認後、Boxのフォルダ `text`に書き起こしファイルが作成されていること、フォルダ `speech` に置いたファイルが `done` フォルダに移動していることを確認します。
+
+![稼働中スクリーンイメージ](images/working_sc.png)
+
+## 6. ログ機能
+
+本アプリでは標準出力以外にBoxにログ出力する機能を搭載しています。
+* 環境変数：`CE_BOX_LOG_ENABLED`=`true` or `false`(デフォルト)
+* 一般シークレット（例：app-job-secret）に含めており、変更後app/jobの再デプロイをして適用してください。buildは不要です。
+* ログは簡易的な実装で、`done`フォルダに`box-stt.log`として保存され、1エントリ毎に新バージョンとして追加されます。削除機能はありませんので、Boxで直接メンテナンスしてください。
+
+(参考) Code Engineのログは `IBM CLoud Logs`への`Logs Routing` にて行われるように変更になりました。実現には以下の条件と作業が必要です。
+* 稼働サービス：`IBM CLoud Logs`
+* 参考ドキュメント：
+
+   [サービス間のアクセスを許可する権限の管理](https://cloud.ibm.com/docs/logs-router?topic=logs-router-iam-service-auth) 
+
+   [S2S権限を作成して、ログをIBM Cloud Logsに送信するアクセスを許可する](https://cloud.ibm.com/docs/logs-router?topic=logs-router-iam-service-auth-logs-routing&interface=ui)
+
+* 「許可」の定義：IBM Cloud コンソール 「管理」> 「アクセス（IAM)」、右側メニュー「アクセスの管理」>「許可」で以下定義を作成
+
+   ソース
+   * **ソース・アカウント**：当該アカウント
+   * **サービス**：IBM Cloud Logs Routing
+   * **リソース**：すべて（のリソース）
+
+   ターゲット
+   * **サービス**：Cloud Logs
+   * **リソース**：特定のリソース -- Service Instance ストリングが等しい(string equals) _<稼働中のCloud Logsのリソース名>_
+   * **役割**：Sender　(*上記選択が正しく、ユーザーの権限がある場合のみ選択肢が表示される)
+
+* 上記定義により、Code Engineのアプリ/ジョブの右側プルダウンの `Logging`メニューが機能するようになり、選択するとCloud Logsが別タブで起動されます。当アプリからのprint出力も1つのエントリとして記録されます。
+
+## 7. うまく稼働しない場合の確認ポイント
+
+設定作業実施時にミスしやすいポイントを挙げました。うまくいかない場合は以下を確認してみてください。
+* 環境変数の転記ミス：作業ではSaaSのUI画面で表示された情報等を.envに転記し、そのあとCode Engineのシークレットに再転記する、という手順で紹介しています。作成漏れや転記ミスを疑ってください。
+* docker操作：モジュールのbuildとpushでエラーが発生していないことを確認してください。シェル環境でのibmcloudへのログイン、ibmcloud crへのログインを行ったうえで実行が必要です。
+* Code Engineのアプリケーション、ジョブ：`stt-revceiver-app`はアプリケーション、`stt-worker-job`はジョブとして作成します。作成先と名称のタイプミスを疑ってください。
+* Boxアプリの各種定義：(1)Platformアプリの作業用ルートフォルダへの招待が必要です。(2)webhookのURLは末尾に `/webhook` が必要です。(3)webhookのコンテンツタイプは`speech`フォルダへの`File Uploaded`です。(4)設定変更後は承認依頼と管理者による承認が毎回必要です。
+
+## 8. 免責事項
+
+当リポジトリは作成時に稼働確認を行っておりますが、その後のメンテナンスは未定です。プログラムロジックは機能確認向けの最低限の内容であり、エラーハンドリングやリカバリ機能などは盛り込んでおりません。ご承知のうえ、ご参考としてご利用ください。

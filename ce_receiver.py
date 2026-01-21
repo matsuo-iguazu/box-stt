@@ -6,6 +6,8 @@ from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from ibm_code_engine_sdk.code_engine_v2 import CodeEngineV2
 from ce_utils import ce_log # 共通ログをインポート
 
+SUPPORTED_EXTENSIONS = ('.mp3', '.wav')
+
 load_dotenv()
 app = Flask(__name__)
 
@@ -56,7 +58,7 @@ def handle_webhook():
     if trigger != 'FILE.UPLOADED':
         return jsonify({"status": "ignored"}), 200
 
-    if file_id and file_name and file_name.lower().endswith('.mp3'):
+    if file_id and file_name and file_name.lower().endswith(SUPPORTED_EXTENSIONS):
         ce_log("RECEIVER", "2.WORKER起動依頼", file_name)
         
         # 本物のCode Engine Jobをキック！

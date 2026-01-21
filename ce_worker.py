@@ -1,3 +1,4 @@
+### ce_worker.py
 import os
 import sys
 import io
@@ -49,17 +50,32 @@ def main():
         # 1. ダウンロード
         file_content = box.downloads.download_file(file_id)
         audio_data = io.BytesIO(file_content.read())
+        # --- 追加: 拡張子判定による content_type 設定 ---
+        _, ext = os.path.splitext(file_name)
+        ext = ext.lower()
+        if ext == '.mp3':
+            content_type = 'audio/mp3'
+        elif ext == '.wav':
+            content_type = 'audio/wav'
+        else:
+            # 未対応の拡張子は警告して mp3 をデフォルトにする（既存挙動に合わせる）
+            ce_log("WORKER", "WARN", f"Unknown extension '{ext}' for {file_name}, defaulting to audio/mp3")
+            content_type = 'audio/mp3'
+
+        # --- 追加: .env から STT_MODEL を取得（無ければ従来の ja-JP をフォールバック） ---
+        stt_model = os.getenv('STT_MODEL') or 'ja-JP'
 
         # 2. Watsonジョブ作成
         ce_log("WORKER", "2.ジョブ作成", file_name)
+        # create_job に渡すパラメータに content_type と model を反映
+        audio_data.seek(0)
         job = stt.create_job(
-            audio_data, content_type='audio/mp3',
-            model='ja-JP', results_ttl=120
+            audio=audio_data, content_type=content_type,
+            model=stt_model, results_ttl=120
         ).get_result()
         
         job_id = job['id']
         ce_log("WORKER", "3.ジョブ監視中", job_id)
-
 
         # 3. ポーリング
         while True:
@@ -88,8 +104,27 @@ def main():
         ce_log("WORKER", "4.テキスト保存", text_filename)
 
         # 5. ファイル移動
-        box.files.update_file_by_id(file_id, parent={"id": os.getenv('BOX_DONE_FOLDER_ID')})
-        ce_log("WORKER", "5.ファイル移動", file_name)
+        #   移動先に同名ファイルがあった場合はエラーにせず、そのファイルに対して「新バージョンをアップロード」する。
+        done_folder_id = os.getenv('BOX_DONE_FOLDER_ID')
+        existing_done_id = find_existing_file(box, done_folder_id, file_name)
+
+        # reset pointer for potential upload
+        audio_data.seek(0)
+
+        if existing_done_id:
+            # 既存ファイルに対して新バージョンとして格納し、元ファイルは削除して「移動」相当とする
+            box.uploads.upload_file_version(file_id=existing_done_id, file=audio_data, attributes=UploadFileVersionAttributes(name=file_name))
+            # 元ファイルを削除して移動と同等にする
+            try:
+                box.files.delete_file_by_id(file_id)
+            except Exception as e:
+                # 削除に失敗しても致命的ではないのでログに残す
+                ce_log("WORKER", "WARN", f"Failed to delete original file {file_id}: {str(e)}")
+            ce_log("WORKER", "5.ファイル移動(既存にバージョン追加)", file_name)
+        else:
+            # 既存ファイルがなければ従来通り移動
+            box.files.update_file_by_id(file_id, parent={"id": done_folder_id})
+            ce_log("WORKER", "5.ファイル移動", file_name)
 
         # 6. 処理完了
         ce_log("WORKER", "6.処理完了", file_name)
