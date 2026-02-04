@@ -69,7 +69,7 @@ sequenceDiagram
 1. 本リポジトリをクローンします。
 2. `env.sample` をコピーして `.env` ファイルを作成します。以降の手順で取得する値は、この `.env` の該当項目に順次貼り付けてください。
 
-### STEP 2: IBM CLoud API key (IAM) の取得
+### STEP 2: IBM Cloud API key (IAM) の取得
 
 1. IBM Cloud のAPIキーを取得済みの場合はそれを利用します。TechZone環境で提供済みの場合はそれを確認します。
 2. 取得できていない場合は、IBM Cloud コンソールの「管理」>「アクセス（IAM）」、左側メニュー「APIキー」よりAPIキーを作成します。
